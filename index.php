@@ -158,6 +158,9 @@ elseif (!empty($logout)) {
 		var users = new UsersCollection([{
 			"id": 42,
 			"name": "RasCarlito"
+		}, {
+			"id": 43,
+			"name": "Pouette"
 		}]);
 
 		App.Router.map(function() {
@@ -185,13 +188,16 @@ elseif (!empty($logout)) {
 			// Declaring a users list route
 			this.route("users_list", {
 				"path": "/users",
+				"data": function() {
+					return users;
+				},
 				"before": [
 					"home",	// Executing the home route as a trigger
 					"other_module"
 				],
-				"action": function() {
+				"action": function(users) {
 					console.log("Controller action: users_list");
-					$(".content").html("Current page: Users");
+					$(".content").html("Current page: Users (length: " + users.length + ")");
 				}
 			});
 
