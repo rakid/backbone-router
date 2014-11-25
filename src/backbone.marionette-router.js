@@ -309,7 +309,17 @@
 
 				// Execute route main action
 				if (_.isFunction(def.action)) {
-					def.action.apply(self, arguments);
+					// Check if a data loader is provided
+					if (_.isFunction(def.data)) {
+						// Execute data loader
+						var data = def.data.apply(self, arguments);
+
+						// Call action with loaded data
+						def.action.call(self, data);
+					} else {
+						// Call action passing path arguments directly
+						def.action.apply(self, arguments);
+					}
 				}
 
 				// Process post-triggers

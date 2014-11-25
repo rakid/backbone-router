@@ -149,6 +149,17 @@ elseif (!empty($logout)) {
 
 		App.Router = Backbone.MarionetteRouter;
 
+		var UserModel = Backbone.Model.extend({});
+
+		var UsersCollection = Backbone.Collection.extend({
+			"model": UserModel
+		});
+
+		var users = new UsersCollection([{
+			"id": 42,
+			"name": "RasCarlito"
+		}]);
+
 		App.Router.map(function() {
 			// Catching client-side 404s (optional)
 			this.route("404", {
@@ -194,9 +205,13 @@ elseif (!empty($logout)) {
 			this.route("user_show", {
 				"path": "/users/:id",
 				"authed": true,
-				"action": function(userId) {
+				// Bind data to action
+				"data": function(userId) {
+					return users.get(userId);
+				},
+				"action": function(user) {
 					console.log("Controller action: user_show");
-					$(".content").html("Current page: User #" + userId);
+					$(".content").html("Current page: " + user.get("name") + " profil");
 				}
 			});
 
