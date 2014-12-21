@@ -28,8 +28,7 @@
 
     <div class="container">
       <section id="main_content">
-
-<p>This library wraps the <code>Backbone.Router</code> to simplify its use and bring new functionalities</p>
+        <p>This library wraps the <code>Backbone.Router</code> to simplify its use and bring new functionalities</p>
 
 <p>Its structure and API is inspired by routers in the Node.js frameworks: Meteor and ExpressJS.</p>
 
@@ -149,6 +148,10 @@ Backbone.Router.<span class="pl-sc">start</span>(App, {
 <span class="pl-c">// Start router</span>
 Backbone.Router.<span class="pl-sc">start</span>(dispatcher);</pre></div>
 
+<p>The dispatcher can also be overridden before the router is started in this way:</p>
+
+<div class="highlight highlight-javascript"><pre>Backbone.Router.dispatcher <span class="pl-k">=</span> _.extend({}, Backbone.Events);</pre></div>
+
 <h2>
 <a id="router-go" class="anchor" href="#router-go" aria-hidden="true"><span class="octicon octicon-link"></span></a>Router go!</h2>
 
@@ -159,7 +162,7 @@ Backbone.Router.<span class="pl-sc">start</span>(dispatcher);</pre></div>
 <p><strong>Parameters</strong></p>
 
 <ul>
-<li>name (String): The route name to execute.</li>
+<li>name (Mixed): The route name to execute or an object describing the route.</li>
 <li>args (Mixed): Array of arguments, can also be a function's <code>arguments</code> object.</li>
 <li>options (Object): Passed to the Backbone.Router navigate method. Defaults to <code>{ "trigger": true, "replace": false }</code>
 </li>
@@ -193,6 +196,16 @@ $(<span class="pl-s1"><span class="pl-pds">"</span>a.profile<span class="pl-pds"
   Backbone.Router.<span class="pl-s3">go</span>(<span class="pl-s1"><span class="pl-pds">"</span>user_profile<span class="pl-pds">"</span></span>, [userId]);
 });</pre></div>
 
+<p>As the first parameter to the <code>go</code> method can be an object, we could also write the previous script in this manner:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Intercept the user click</span>
+$(<span class="pl-s1"><span class="pl-pds">"</span>a.profile<span class="pl-pds">"</span></span>).<span class="pl-s3">click</span>(<span class="pl-st">function</span>(<span class="pl-vpf">e</span>) {
+  e.preventDefault();
+
+  <span class="pl-c">// Redirecting to route using the path defined in the href attribute</span>
+  Backbone.Router.<span class="pl-s3">go</span>({ <span class="pl-s1"><span class="pl-pds">"</span>path<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-v">this</span>.<span class="pl-sc">href</span> });
+});</pre></div>
+
 <h2>
 <a id="route-declaration-parameters" class="anchor" href="#route-declaration-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Route declaration parameters</h2>
 
@@ -220,25 +233,42 @@ $(<span class="pl-s1"><span class="pl-pds">"</span>a.profile<span class="pl-pds"
   <span class="pl-c">// Execute triggers after the 'action' controller</span>
   <span class="pl-s1"><span class="pl-pds">"</span>after<span class="pl-pds">"</span></span><span class="pl-k">:</span> [
     <span class="pl-s1"><span class="pl-pds">"</span>core:post_triggers<span class="pl-pds">"</span></span>
-  ]
+  ],
+
+  <span class="pl-c">// Executed when user is routed away from this route</span>
+  <span class="pl-s1"><span class="pl-pds">"</span><span class="pl-en">close</span><span class="pl-pds">"</span></span>: <span class="pl-st">function</span>() {
+    <span class="pl-c">// Return false to cancel the routing</span>
+    <span class="pl-k">return</span> <span class="pl-s3">confirm</span>(<span class="pl-s1"><span class="pl-pds">"</span>Are you sure you want to leave this page?<span class="pl-pds">"</span></span>);
+  }
 }</pre></div>
 
 <h3>
-<a id="catching-client-side-404" class="anchor" href="#catching-client-side-404" aria-hidden="true"><span class="octicon octicon-link"></span></a>Catching client-side 404</h3>
+<a id="catching-client-side-404-and-403" class="anchor" href="#catching-client-side-404-and-403" aria-hidden="true"><span class="octicon octicon-link"></span></a>Catching client-side 404 and 403</h3>
 
-<p>A route named 404 can be declared to catch all non-existent routes:</p>
+<p>A route named 404 can be declared to catch all non-existent routes.
+In the same way a route can be named 403 to catch accessing restricted routes.</p>
 
 <div class="highlight highlight-javascript"><pre>Backbone.Router.map(<span class="pl-st">function</span>() {
   <span class="pl-c">// 404 controller</span>
   <span class="pl-v">this</span>.route(<span class="pl-s1"><span class="pl-pds">"</span>404<span class="pl-pds">"</span></span>, {
     <span class="pl-s1"><span class="pl-pds">"</span><span class="pl-en">action</span><span class="pl-pds">"</span></span>: <span class="pl-st">function</span>(<span class="pl-vpf">path</span>) {
-      <span class="pl-c">// Render a nice 404 page</span>
+      <span class="pl-c">// Couldn't find what you're looking for =/</span>
+    }
+  });
+
+  <span class="pl-c">// 403 controller</span>
+  <span class="pl-v">this</span>.route(<span class="pl-s1"><span class="pl-pds">"</span>403<span class="pl-pds">"</span></span>, {
+    <span class="pl-s1"><span class="pl-pds">"</span><span class="pl-en">action</span><span class="pl-pds">"</span></span>: <span class="pl-st">function</span>(<span class="pl-vpf">path</span>) {
+      <span class="pl-c">// Sorry you can't access this content =(</span>
     }
   });
 });</pre></div>
 
-<p>For convenience, the action method will receive the current <code>window.location.pathname</code> as the first argument.
-The controller will also be executed when a non-existent route is called with the <code>go</code> method.</p>
+<p>For convenience, the action methods will receive the current <code>window.location.pathname</code> as the first argument.</p>
+
+<p>The 404 controller will also be executed when a non-existent route is called with the <code>go</code> method.</p>
+
+<p>The 403 controller will only be executed if the <code>redirectToLogin</code> option is set to <code>false</code>.</p>
 
 <h2>
 <a id="events-distribution-triggers" class="anchor" href="#events-distribution-triggers" aria-hidden="true"><span class="octicon octicon-link"></span></a>Events distribution (Triggers)</h2>
