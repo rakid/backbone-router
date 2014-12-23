@@ -177,6 +177,10 @@ elseif (!empty($logout)) {
 				"action": function() {
 					console.log("Controller action: home");
 					$(".content").html("Current page: Home");
+
+					console.log(this);
+
+					// this.go({ "path": "/blabla" });
 				},
 				"close": function() {
 					if (App.user) {

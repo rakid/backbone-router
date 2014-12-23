@@ -9,10 +9,16 @@
 
 
 	/**
-	 * Copy the actual Backbone.Router so that we can override it
+	 * Copy the original Backbone.Router so that we can override it
 	 * @type {Backbone.Router}
 	 */
 	var BackboneRouter = Backbone.Router;
+
+	/**
+	 * List of methods from the original Backbone.Router that need to be mapped on the new one
+	 * @type {Array}
+	 */
+	var backboneRouterMethods = ["on", "off", "once", "listenTo", "listenToOnce", "stopListening", "trigger"]
 
 	/**
 	 * Instance holder for the actual Backbone.Router
@@ -141,7 +147,7 @@
 			var Router = BackboneRouter.extend(_.extend({}, controller, { "routes": routes }));
 
 			// Initialize router
-			router = new Router();
+			router = window.router = new Router();
 
 			// Determine the path regex of each route and store it
 			_.forEach(routes, function(name, path) {
@@ -314,30 +320,39 @@
 				closeControllers[currentName] = def.close;
 			}
 
+			/**
+			 * Controller wrapper method to provide all the good stuff we have to offer
+			 *
+			 * @this {Backbone.Router}
+			 * @param  {Array}   args     Array of parameters that will be passed to the callbacks or 
+			 * @param  {Boolean} trigger  Is the controller wrapper executed as trigger or not
+			 */
 			var controllerWrapper = function(args, trigger) {
+				var self = this;
+
 				// Store the current route name if it is not a trigger
 				if (!trigger) {
-					self.currentRoutes.push(currentName);
+					this.currentRoutes.push(currentName);
 				}
 
 				// Check if the route should be ignored based on the user being logged in or not
 				// and the route.authed option being set to true or false
-				if (!_.isUndefined(def.authed) && ((def.authed && !self.options.authed) || (!def.authed && self.options.authed))) {
+				if (!_.isUndefined(def.authed) && ((def.authed && !this.options.authed) || (!def.authed && this.options.authed))) {
 					// Redirect user to login route if defined, else try to execute 403 controller
-					if (self.options.redirectToLogin && !self.options.authed) {
-						self.options.log("[Backbone.Router] Secured page, redirecting to login");
+					if (this.options.redirectToLogin && !this.options.authed) {
+						this.options.log("[Backbone.Router] Secured page, redirecting to login");
 
 						// Store current route in case login reloads the page
-						self.storeCurrentRoute();
+						this.storeCurrentRoute();
 
 						// Redirect to login
-						self.processControllers("login");
+						this.processControllers("login");
 					} else {
-						self.options.log("[Backbone.Router] Skipping route '" + currentName +
-							"', " + (self.options.authed ? "" : "not ") + "logged in");
+						this.options.log("[Backbone.Router] Skipping route '" + currentName +
+							"', " + (this.options.authed ? "" : "not ") + "logged in");
 
 						// Execute 403 controller
-						this.processControllers("403", [self.options.pushState ?
+						this.processControllers("403", [this.options.pushState ?
 							window.location.pathname.substring(1) : window.location.hash.substring(1)]);
 					}
 					return false;
@@ -345,29 +360,41 @@
 
 				// Check if the route is an alias
 				if (_.isString(def.action)) {
-					self.options.log("[Backbone.Router] Caught alias route: '" + currentName + "' >> '" + def.action + "'");
+					this.options.log("[Backbone.Router] Caught alias route: '" + currentName + "' >> '" + def.action + "'");
 
 					// Execute alias route
-					self.processControllers(def.action, args, true);
+					this.processControllers(def.action, args, true);
 
 					return false;
 				} else {
-					self.options.log("[Backbone.Router] Executing route named '" + currentName + "'");
+					this.options.log("[Backbone.Router] Executing route named '" + currentName + "'");
 				}
 
 				// Process pre-triggers
 				if (!_.isEmpty(def.before)) {
-					self.processTriggers(def.before);
+					this.processTriggers(def.before);
 				}
 
 				// Execute route main action
 				if (_.isFunction(def.action)) {
-					def.action.apply(self, args);
+					// Create a special context for the action method
+					var context = {
+						"authed": this.options.authed,
+						"referer": null,
+						"params": {},
+						"go": function() {
+							self.go.apply(self, arguments);
+						},
+						"next": function() {},
+						"stop": function() {}
+					};
+
+					def.action.apply(context, args);
 				}
 
 				// Process post-triggers
 				if (!_.isEmpty(def.after)) {
-					self.processTriggers(def.after);
+					this.processTriggers(def.after);
 				}
 			};
 
@@ -721,17 +748,18 @@
 			if (localStorage) {
 				localStorage.removeItem("backbone-router:path");
 			}
-		},
-
-		"on": function() {
-			router.on.apply(router, arguments);
-		},
-
-		"off": function() {
-			router.off.apply(router, arguments);
 		}
-
 	};
+
+
+	// Map methods from the original Backbone.Router
+	_.forEach(backboneRouterMethods, function(fn) {
+		// Define the method
+		Backbone.Router[fn] = function() {
+			// Forward the call to the original Backbone.Router instance
+			router[fn].apply(router, arguments);
+		};
+	})
 
 
 })(window);
