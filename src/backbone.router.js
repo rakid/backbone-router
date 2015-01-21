@@ -236,7 +236,7 @@
 		 * }
 		 *
 		 * A route can be limited to when a user is connected by setting the route.authed option to true.
-		 * For this to work the Backbone.Router.authed parameter has to be set to true when the server considers the user logged in.
+		 * See readme.md for more info: http://citizen-media.github.io/backbone-router/
 		 *
 		 * {
 		 *   "path": "/admin",
@@ -425,7 +425,8 @@
 		 * @return {Boolean}     Will return false if the routing was cancelled, else true
 		 */
 		"go": function(name, args, options) {
-			var route = null,
+			var self = this,
+				route = null,
 				path = null;
 
 			// Check if an object is given instead of a string
@@ -456,41 +457,64 @@
 				this.processControllers("404", [this.options.pushState ?
 					window.location.pathname.substring(1) : window.location.hash.substring(1)]);
 			} else {
-				var continueProcess = true;
+				var continueProcess = true,
+					then = function() {
+						// Re-initialize currentRoutes storage
+						this.currentRoutes = [];
+
+						// Extend default router navigate options
+						options = _.extend({ "trigger": true, "replace": false }, options);
+
+						if (!path) {
+							// Retrieve route path
+							path = this.path(name);
+
+							// Inject route arguments if necessary
+							if ((_.isObject(args) || _.isArray(args)) && !_.isEmpty(args)) {
+								path = this.parse(path, args);
+							}
+						}
+
+						if (path !== false) {
+							// Navigate the Backbone.Router
+							router.navigate(path, options);
+						}
+					};
 
 				_.forEach(this.currentRoutes, function(route) {
 					// Check if the previous route has a close controller
 					if (_.isFunction(closeControllers[route]) && name !== route) {
+						// Create a special context for the action method
+						var context = {
+							"authed": self.options.authed,
+							"referer": null,
+							"params": {},
+							"go": function() {
+								self.go.apply(self, arguments);
+							},
+							"next": function() {
+								then.call(self);
+							},
+							"stop": function() {
+								
+							}
+						};
+
 						// Execute close controller passing current route data and retrieve result
-						continueProcess = closeControllers[route].call(self, name, args, options);
+						continueProcess = closeControllers[route].call(context, name, args, options);
+
+						continueProcess = continueProcess || false;
 					}
 				});
+
+
 
 				// If controller returned false, cancel go process
 				if (!continueProcess) {
 					return false;
 				}
 
-				// Re-initialize currentRoutes storage
-				this.currentRoutes = [];
-
-				// Extend default router navigate options
-				options = _.extend({ "trigger": true, "replace": false }, options);
-
-				if (!path) {
-					// Retrieve route path
-					path = this.path(name);
-
-					// Inject route arguments if necessary
-					if ((_.isObject(args) || _.isArray(args)) && !_.isEmpty(args)) {
-						path = this.parse(path, args);
-					}
-				}
-
-				if (path !== false) {
-					// Navigate the Backbone.Router
-					router.navigate(path, options);
-				}
+				then.call(this);
 
 				return true;
 			}

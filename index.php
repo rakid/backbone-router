@@ -170,6 +170,7 @@ elseif (!empty($logout)) {
 			// Declaring a home route
 			this.route("home", {
 				"path": "/",
+				"wait": true, // @todo wouhou!!
 				"before": [
 					{ "name": "core", "cache": true },
 					{ "name": "module", "cache": true }
@@ -179,6 +180,12 @@ elseif (!empty($logout)) {
 					$(".content").html("Current page: Home");
 
 					console.log(this);
+
+					setTimeout(function() {
+						self.next();
+					}, 10000);
+
+					return false;
 
 					// this.go({ "path": "/blabla" });
 				},
