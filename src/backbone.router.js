@@ -684,6 +684,25 @@
 			return newParts.join("/");
 		},
 
+		/**
+		 * Retrieve the path for a named route
+		 * 
+		 * @param  {String} routeName  The route name
+		 * @param  {Array}  args       The arguments that need to be injected into the path
+		 * @return {String}            The route path or false if the route doesn't exist
+		 */
+		"getPath": function(routeName, args) {
+			var path;
+
+			for (path in routes) {
+				if (routes[path] === routeName) {
+					return this.parse(path, args);
+				}
+			}
+
+			return false;
+		},
+
 
 		/**
 		 * Store the current pathname in the local storage
